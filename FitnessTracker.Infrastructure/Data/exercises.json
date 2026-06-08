@@ -1,0 +1,10 @@
+[
+  { "Id": 1, "Name": "Bench Press", "Description": "Lie on a flat bench, grip the barbell slightly wider than shoulder-width, lower it to your chest, and push it back up.", "MuscleGroup": "Chest" },
+  { "Id": 2, "Name": "Incline Dumbbell Press", "Description": "Sit on an incline bench, press dumbbells upward from chest level until arms are extended.", "MuscleGroup": "Chest" },
+  { "Id": 3, "Name": "Barbell Squat", "Description": "Rest a barbell on your upper back, drop your hips down until thighs are parallel to the floor, then drive back up.", "MuscleGroup": "Legs" },
+  { "Id": 4, "Name": "Romanian Deadlift", "Description": "Hold a barbell at hip height, hinge at your hips while keeping legs relatively straight, lowering the weight to mid-shin.", "MuscleGroup": "Legs" },
+  { "Id": 5, "Name": "Pull-Up", "Description": "Hang from a bar with palms facing away, pull your body up until your chin clears the bar.", "MuscleGroup": "Back" },
+  { "Id": 6, "Name": "Barbell Row", "Description": "Hinge forward at the hips holding a barbell, pull the bar toward your lower chest keeping elbows close to your body.", "MuscleGroup": "Back" },
+  { "Id": 7, "Name": "Overhead Press", "Description": "Press a barbell from shoulder height directly overhead until arms are completely locked out.", "MuscleGroup": "Shoulders" },
+  { "Id": 8, "Name": "Dumbbell Lateral Raise", "Description": "Stand straight with dumbbells at your sides, raise arms outward to the sides until parallel with the floor.", "MuscleGroup": "Shoulders" }
+]
