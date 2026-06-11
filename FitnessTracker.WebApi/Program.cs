@@ -65,6 +65,7 @@ builder.Services.AddCors(options =>
 });
 
 // ─── 5. Application Services (DI) ────────────────────────────────────────────
+builder.Services.AddScoped<IWorkoutSessionService, WorkoutSessionService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IExerciseService, ExerciseService>();
 builder.Services.AddScoped<IWorkoutRoutineService, WorkoutRoutineService>();
