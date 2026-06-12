@@ -7,109 +7,140 @@ using Microsoft.AspNetCore.Mvc;
 namespace FitnessTracker.WebApi.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")] // Maps to: api/WorkoutSessions
+    [Route("api/[controller]")] // Fallback routing to api/workoutsessions
     [Authorize]
     public class WorkoutSessionsController : ControllerBase
     {
-        private readonly IWorkoutSessionService _sessionService;
+        private readonly IWorkoutSessionService _workoutSessionService;
 
-        public WorkoutSessionsController(IWorkoutSessionService sessionService)
+        public WorkoutSessionsController(IWorkoutSessionService workoutSessionService)
         {
-            _sessionService = sessionService;
+            _workoutSessionService = workoutSessionService;
         }
 
-        // 1. MATCHES: Task<IEnumerable<WorkoutSessionDto>> GetHistoryAsync(string userId)
-        // GET api/workoutsessions/my
-        [HttpGet("my")]
-        public async Task<IActionResult> GetAllMySessions()
+        // POST api/workoutsessions/start
+        [HttpPost("start")]
+        public async Task<IActionResult> Start([FromBody] StartWorkoutModel model)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var sessions = await _sessionService.GetHistoryAsync(userId);
-            return Ok(sessions);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var session = await _workoutSessionService.StartAsync(userId, model);
+            return Ok(session);
         }
 
-        // 2. MATCHES: Task<WorkoutSessionDto?> GetByIdAsync(int id, string userId, bool isAdmin)
+        // GET api/workoutsessions/setup-active
+        [HttpGet("setup-active")]
+        public async Task<IActionResult> SetupActiveFromLibrary([FromQuery] int? templateId, [FromQuery] int? cloneFromId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            // This anonymous structure matches exactly what your frontend JavaScript expects to unpack!
+            var clientPayload = new
+            {
+                workoutName = "Custom Routine Log",
+                exercises = new List<object>()
+            };
+
+            // Case A: User clicked a past history log to clone target items
+            if (cloneFromId.HasValue)
+            {
+                var oldSession = await _workoutSessionService.GetByIdAsync(cloneFromId.Value, userId, false);
+                if (oldSession != null)
+                {
+                    clientPayload = new
+                    {
+                        workoutName = $"{oldSession.Name ?? "Workout"} Layout",
+                        exercises = oldSession.Sets
+                            .GroupBy(s => s.ExerciseId)
+                            .Select(g => new
+                            {
+                                exerciseId = g.Key,
+                                name = g.First().ExerciseName,
+                                sets = g.Select(s => new { targetWeight = s.WeightUsed, targetReps = s.RepsCompleted }).ToList()
+                            })
+                            .Cast<object>()
+                            .ToList()
+                    };
+                }
+            }
+            // Case B: User clicked a template block configuration row shortcut
+            else if (templateId.HasValue)
+            {
+                // For now, give a clean title placeholder until you expand template relations later
+                clientPayload = new
+                {
+                    workoutName = "Template Routine",
+                    exercises = new List<object>() 
+                };
+            }
+
+            return Ok(clientPayload);
+        }
+
         // GET api/workoutsessions/5
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
             var isAdmin = User.IsInRole("Administrator");
-
-            var session = await _sessionService.GetByIdAsync(id, userId, isAdmin);
-            if (session == null)
-                return NotFound(new { message = $"Workout session with id {id} not found." });
-
+            var session = await _workoutSessionService.GetByIdAsync(id, userId, isAdmin);
+            
+            if (session == null) return NotFound(new { message = "Session not found." });
             return Ok(session);
         }
 
-        // 3. MATCHES: Task<WorkoutSessionDto> StartAsync(string userId, StartWorkoutModel model)
-        // POST api/workoutsessions/start
-        [HttpPost("start")]
-        public async Task<IActionResult> StartSession([FromBody] StartWorkoutModel model)
+        // GET api/workoutsessions/my (Used by library.html history section!)
+        [HttpGet("my")]
+        public async Task<IActionResult> GetAllMySessions()
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var activeSession = await _sessionService.StartAsync(userId, model);
-            return Ok(activeSession);
+            var sessions = await _workoutSessionService.GetAllMySessionsAsync(userId);
+            return Ok(sessions);
         }
 
-        // 4. MATCHES: Task<WorkoutSessionDto?> GetActiveAsync(string userId)
-        // GET api/workoutsessions/active
-        [HttpGet("active")]
-        public async Task<IActionResult> GetActiveSession()
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var active = await _sessionService.GetActiveAsync(userId);
-            if (active == null)
-                return NoContent(); // 204 status: UI knows there isn't a live tracking session running
-
-            return Ok(active);
-        }
-
-        // 5. MATCHES: Task<WorkoutSetDto?> AddSetAsync(int sessionId, string userId, AddSetInputModel model)
         // POST api/workoutsessions/5/sets
-        [HttpPost("{sessionId:int}/sets")]
-        public async Task<IActionResult> AddSet(int sessionId, [FromBody] AddSetInputModel model)
+        [HttpPost("{id:int}/sets")]
+        public async Task<IActionResult> AddSet(int id, [FromBody] AddSetInputModel model)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var newSet = await _sessionService.AddSetAsync(sessionId, userId, model);
-            
-            if (newSet == null)
-                return NotFound(new { message = "Could not log set. Session not found or access denied." });
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-            return Ok(newSet);
+            var createdSet = await _workoutSessionService.AddSetAsync(id, userId, model);
+            if (createdSet == null) return BadRequest(new { message = "Could not add set to this session." });
+
+            return Ok(createdSet);
         }
 
-        // 6. MATCHES: Task<bool> RemoveSetAsync(int sessionId, int setId, string userId)
         // DELETE api/workoutsessions/5/sets/12
-        [HttpDelete("{sessionId:int}/sets/{setId:int}")]
-        public async Task<IActionResult> RemoveSet(int sessionId, int setId)
+        [HttpDelete("{id:int}/sets/{setId:int}")]
+        public async Task<IActionResult> RemoveSet(int id, int setId)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var deleted = await _sessionService.RemoveSetAsync(sessionId, setId, userId);
-            
-            if (!deleted)
-                return BadRequest(new { message = "Could not remove set. Session/Set not found or unauthorized." });
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var success = await _workoutSessionService.RemoveSetAsync(id, setId, userId);
+            if (!success) return BadRequest(new { message = "Could not remove set." });
 
             return NoContent();
         }
 
-        // 7. MATCHES: Task<WorkoutSessionDto?> FinishAsync(int sessionId, string userId, bool save)
-        // POST api/workoutsessions/5/finish?save=true
-        [HttpPost("{sessionId:int}/finish")]
-        public async Task<IActionResult> FinishWorkout(int sessionId, [FromQuery] bool save)
+        // POST api/workoutsessions/5/finish
+        [HttpPost("{id:int}/finish")]
+        public async Task<IActionResult> Finish(int id, [FromQuery] bool save = true)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var finishedSession = await _sessionService.FinishAsync(sessionId, userId, save);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-            if (finishedSession == null && save)
-                return NotFound(new { message = "Could not find or save session." });
+            var finishedSession = await _workoutSessionService.FinishAsync(id, userId, save);
+            if (finishedSession == null && save) return BadRequest(new { message = "Could not complete session." });
 
             return Ok(finishedSession);
         }
