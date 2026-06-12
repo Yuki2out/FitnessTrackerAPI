@@ -5,7 +5,7 @@ using FitnessTracker.Core.Interfaces;
 namespace FitnessTracker.WebApi.Controllers
 {
     [ApiController]
-    [Route("api/auth")] // <-- THIS MATCHES apiFetch("/auth/login") EXACTLY!
+    [Route("api/auth")] 
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;

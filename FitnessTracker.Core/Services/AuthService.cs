@@ -10,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace FitnessTracker.Core.Services
 {
+    
     public class AuthService : IAuthService
     {
         private readonly UserManager<ApplicationUser> _userManager;

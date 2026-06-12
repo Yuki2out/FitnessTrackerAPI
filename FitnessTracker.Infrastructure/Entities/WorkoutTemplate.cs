@@ -13,6 +13,7 @@ namespace FitnessTracker.Infrastructure.Entities
         public string UserId { get;set;} = string.Empty;
 
         public int ExerciseCount {get;set;}
+        public int? PastWorkoutSessionId { get; set; }
 
     }
 

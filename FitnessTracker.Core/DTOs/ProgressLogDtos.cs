@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-
+using System.ComponentModel.DataAnnotations;
 namespace FitnessTracker.Core.DTOs
 {
     public class ProgressLogInputModel
@@ -27,7 +27,7 @@ namespace FitnessTracker.Core.DTOs
     }
 
 
-    // 1. Used for rendering items inside the "Past Workouts" historical list column
+    
     public class PastWorkoutDto
     {
         public int Id { get; set; }
@@ -35,21 +35,21 @@ namespace FitnessTracker.Core.DTOs
         public DateTime EndTime { get; set; }
     }
 
-    // 2. Used for rendering items inside the "Favorite Exercises" quick list column
+    
     public class FavoriteExerciseDto
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
     }
 
-    // 3. The macro engine payload that initializes the active workout session view state
+    
     public class ActiveWorkoutDto
     {
         public string WorkoutName { get; set; } = string.Empty;
         public List<ExerciseActiveInputDto> Exercises { get; set; } = new();
     }
 
-    // 4. Group blocks containing logs split clean across exercise targets
+   
     public class ExerciseActiveInputDto
     {
         public int ExerciseId { get; set; }
@@ -57,11 +57,25 @@ namespace FitnessTracker.Core.DTOs
         public List<SetInputDto> Sets { get; set; } = new();
     }
 
-    // 5. The base weight-rep tracking placeholders
+    
     public class SetInputDto
     {
         public decimal TargetWeight { get; set; }
         public int TargetReps { get; set; }
     }
+
+
+    
+
+    public class CreateTemplateFromHistoryDto
+    {
+        [Required]
+        public int WorkoutSessionId { get; set; }
+
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; } = string.Empty;
+    }
+    
 
 }
