@@ -20,7 +20,7 @@ namespace FitnessTracker.Infrastructure.Entities
         [ForeignKey(nameof(ExerciseId))]
         public Exercise? Exercise { get; set; }
 
-        [Range(0.1, 1000.0)]
+        [Range(0, 1000.0)]
         public double WeightUsed { get; set; }
 
         [Range(1, 200)]

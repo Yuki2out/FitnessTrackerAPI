@@ -42,6 +42,49 @@ namespace FitnessTracker.Core.Services
             return MapToDto(exercise);
         }
 
+        public async Task<IEnumerable<ExerciseDto>> GetFavoritesByUserAsync(string userId)
+        {
+            return await _context.UserFavoriteExercises
+                .Where(f => f.UserId == userId)
+                .Select(f => f.Exercise)
+                .Select(ex => new ExerciseDto
+                {
+                    Id = ex!.Id,
+                    Name = ex.Name,
+                    Description = ex.Description,
+                    MuscleGroup = ex.MuscleGroup
+                })
+                .ToListAsync();
+        }
+
+        public async Task<bool> FavoriteExerciseAsync(string userId, int exerciseId)
+        {
+            var exists = await _context.UserFavoriteExercises.AnyAsync(f => f.UserId == userId && f.ExerciseId == exerciseId);
+            if (exists) return true;
+            _context.UserFavoriteExercises.Add(new UserFavoriteExercise
+            {
+                UserId = userId,
+                ExerciseId = exerciseId
+            });
+            
+            return await _context.SaveChangesAsync() > 0  ;      
+        }
+
+        public async Task<bool> UnfavoriteExerciseAsync(string userId, int exerciseId)
+        {
+            var fav = await _context.UserFavoriteExercises.FirstOrDefaultAsync(f => f.UserId ==  userId && f.ExerciseId == exerciseId);
+            _context.UserFavoriteExercises.Remove(fav);
+
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> IsFavoritedAsync(string userId,int exerciseId)
+        {
+            
+            return await _context.UserFavoriteExercises.AnyAsync(f => f.UserId == userId && f.ExerciseId == exerciseId);
+        }
+
+
         public async Task<ExerciseDto?> UpdateAsync(int id, ExerciseInputModel model)
         {
             var exercise = await _context.Exercises.FindAsync(id);

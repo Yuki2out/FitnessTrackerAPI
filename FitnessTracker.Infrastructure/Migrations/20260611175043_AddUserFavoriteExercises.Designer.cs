@@ -4,6 +4,7 @@ using FitnessTracker.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FitnessTracker.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260611175043_AddUserFavoriteExercises")]
+    partial class AddUserFavoriteExercises
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -341,30 +344,6 @@ namespace FitnessTracker.Infrastructure.Migrations
                     b.ToTable("WorkoutSets");
                 });
 
-            modelBuilder.Entity("FitnessTracker.Infrastructure.Entities.WorkoutTemplate", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ExerciseCount")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("WorkoutTemplates");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -395,14 +374,14 @@ namespace FitnessTracker.Infrastructure.Migrations
                         new
                         {
                             Id = "admin-role-id-111",
-                            ConcurrencyStamp = "670acfa6-444f-4702-9c65-1c28fa792318",
+                            ConcurrencyStamp = "65292f58-df3d-4fbc-8e0a-037268e97962",
                             Name = "Administrator",
                             NormalizedName = "ADMINISTRATOR"
                         },
                         new
                         {
                             Id = "user-role-id-222",
-                            ConcurrencyStamp = "9b2a9a6a-7f53-44b6-af34-b4aa9758de36",
+                            ConcurrencyStamp = "fcbb934a-b550-4fad-a989-bb1f9c8019e8",
                             Name = "User",
                             NormalizedName = "USER"
                         });

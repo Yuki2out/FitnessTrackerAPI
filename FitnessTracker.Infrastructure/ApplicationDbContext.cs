@@ -1,10 +1,10 @@
 using System.Text.Json;
-using System.Text.Json.Serialization; // 1. ADD THIS IMPORT
+using System.Text.Json.Serialization; 
 using FitnessTracker.Infrastructure.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-
+using FitnessTracker.Infrastructure.Entities;
 namespace FitnessTracker.Infrastructure
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
@@ -13,11 +13,14 @@ namespace FitnessTracker.Infrastructure
             : base(options)
         {
         }
-
+        public DbSet<WorkoutSession> WorkoutSessions { get; set; }
+        public DbSet<WorkoutSet> WorkoutSets { get; set; }
         public DbSet<Exercise> Exercises { get; set; }
         public DbSet<WorkoutRoutine> WorkoutRoutines { get; set; }
         public DbSet<ProgressLog> ProgressLogs { get; set; }
-
+        public DbSet<UserFavoriteExercise> UserFavoriteExercises { get; set; }
+        public DbSet<WorkoutTemplate> WorkoutTemplates { get; set; }
+        
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -27,6 +30,13 @@ namespace FitnessTracker.Infrastructure
                 new IdentityRole { Id = "admin-role-id-111", Name = "Administrator", NormalizedName = "ADMINISTRATOR" },
                 new IdentityRole { Id = "user-role-id-222", Name = "User", NormalizedName = "USER" }
             );
+
+            // A deleted Exercise shouldn't cascade-delete a user's logged sets
+            builder.Entity<WorkoutSet>()
+                .HasOne(s => s.Exercise)
+                .WithMany()
+                .HasForeignKey(s => s.ExerciseId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Tell EF Core to store the enum values as readable strings in the DB column
             builder.Entity<Exercise>()

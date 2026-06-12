@@ -1,4 +1,5 @@
 using FitnessTracker.Core.DTOs;
+using FitnessTracker.Infrastructure.Entities;
 
 namespace FitnessTracker.Core.Interfaces
 {
@@ -8,7 +9,11 @@ namespace FitnessTracker.Core.Interfaces
         Task<ExerciseDto?> GetByIdAsync(int id);
         Task<ExerciseDto> CreateAsync(ExerciseInputModel model);
         Task<ExerciseDto?> UpdateAsync(int id, ExerciseInputModel model);
+        Task<bool> FavoriteExerciseAsync(string userId, int exerciseId);
+        Task<bool> UnfavoriteExerciseAsync(string userId, int exerciseId);
+        Task<bool> IsFavoritedAsync(string userId,int exerciseId);
         Task<bool> DeleteAsync(int id);
+        Task<IEnumerable<ExerciseDto>> GetFavoritesByUserAsync(string userId);
     }
 
     public interface IWorkoutRoutineService
@@ -20,6 +25,9 @@ namespace FitnessTracker.Core.Interfaces
         Task<RoutineDto?> UpdateAsync(int id, string userId, RoutineInputModel model);
         Task<bool> DeleteAsync(int id, string userId, bool isAdmin);
     }
+
+
+  
 
     public interface IProgressLogService
     {
@@ -34,5 +42,12 @@ namespace FitnessTracker.Core.Interfaces
     {
         Task<AuthResponseDto?> RegisterAsync(RegisterModel model);
         Task<AuthResponseDto?> LoginAsync(LoginModel model);
+    }
+
+    public interface IWorkoutLogService
+    {
+        Task<IEnumerable<PastWorkoutDto>> GetUserHistoryAsync(string userId);
+        Task<IEnumerable<FavoriteExerciseDto>> GetUserFavoritesAsync(string userId);
+        Task<ActiveWorkoutDto?> SetupActiveSessionFromPastWorkoutAsync(int pastWorkoutId, string userId);
     }
 }

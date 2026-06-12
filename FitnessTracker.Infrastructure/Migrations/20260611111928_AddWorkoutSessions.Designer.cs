@@ -4,6 +4,7 @@ using FitnessTracker.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FitnessTracker.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260611111928_AddWorkoutSessions")]
+    partial class AddWorkoutSessions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -227,28 +230,6 @@ namespace FitnessTracker.Infrastructure.Migrations
                     b.ToTable("ProgressLogs");
                 });
 
-            modelBuilder.Entity("FitnessTracker.Infrastructure.Entities.UserFavoriteExercise", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ExerciseId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ExerciseId");
-
-                    b.ToTable("UserFavoriteExercises");
-                });
-
             modelBuilder.Entity("FitnessTracker.Infrastructure.Entities.WorkoutRoutine", b =>
                 {
                     b.Property<int>("Id")
@@ -341,30 +322,6 @@ namespace FitnessTracker.Infrastructure.Migrations
                     b.ToTable("WorkoutSets");
                 });
 
-            modelBuilder.Entity("FitnessTracker.Infrastructure.Entities.WorkoutTemplate", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ExerciseCount")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("WorkoutTemplates");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -395,14 +352,14 @@ namespace FitnessTracker.Infrastructure.Migrations
                         new
                         {
                             Id = "admin-role-id-111",
-                            ConcurrencyStamp = "670acfa6-444f-4702-9c65-1c28fa792318",
+                            ConcurrencyStamp = "6c273598-ea46-426a-8260-962f82a5a50f",
                             Name = "Administrator",
                             NormalizedName = "ADMINISTRATOR"
                         },
                         new
                         {
                             Id = "user-role-id-222",
-                            ConcurrencyStamp = "9b2a9a6a-7f53-44b6-af34-b4aa9758de36",
+                            ConcurrencyStamp = "f06e0e68-e1eb-4608-b7d4-1c5fc11f72b4",
                             Name = "User",
                             NormalizedName = "USER"
                         });
@@ -538,17 +495,6 @@ namespace FitnessTracker.Infrastructure.Migrations
                     b.Navigation("Exercise");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("FitnessTracker.Infrastructure.Entities.UserFavoriteExercise", b =>
-                {
-                    b.HasOne("FitnessTracker.Infrastructure.Entities.Exercise", "Exercise")
-                        .WithMany()
-                        .HasForeignKey("ExerciseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Exercise");
                 });
 
             modelBuilder.Entity("FitnessTracker.Infrastructure.Entities.WorkoutRoutine", b =>

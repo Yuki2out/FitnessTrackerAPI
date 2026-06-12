@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using FitnessTracker.Infrastructure.Enums; // Add this using statement
 
 namespace FitnessTracker.Infrastructure.Entities
@@ -18,5 +19,21 @@ namespace FitnessTracker.Infrastructure.Entities
 
         [Required]
         public MuscleGroup MuscleGroup { get; set; } // Changed from string
+    }
+
+    public class UserFavoriteExercise
+    {
+        [Key]
+        public int Id {get; set;}
+
+        [Required]
+        public string UserId { get; set; } = string.Empty;
+
+        [Required]
+        public int ExerciseId { get; set;}
+
+        [ForeignKey(nameof(ExerciseId))]
+        public Exercise? Exercise {get; set;}
+        
     }
 }

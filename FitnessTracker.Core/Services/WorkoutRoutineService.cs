@@ -15,6 +15,38 @@ namespace FitnessTracker.Core.Services
             _context = context;
         }
 
+        public async Task<FitnessTracker.Core.DTOs.ActiveWorkoutDto?> SetupActiveSessionFromTemplateAsync(int templateId, string userId)
+        {
+            // 1. Fetch the routine template including its direct collection of exercises
+            var routine = await _context.WorkoutRoutines
+                .Include(r => r.Exercises) 
+                .FirstOrDefaultAsync(r => r.Id == templateId);
+
+            // 2. Validate ownership and database existence
+            if (routine == null || routine.CreatorId != userId)
+            {
+                return null; 
+            }
+
+            // 3. Map the tracked entities cleanly into your DTO target layout structure
+            var activeSessionDto = new FitnessTracker.Core.DTOs.ActiveWorkoutDto
+            {
+                WorkoutName = routine.Name,
+                Exercises = routine.Exercises.Select(ex => new FitnessTracker.Core.DTOs.ExerciseActiveInputDto
+                {
+                    ExerciseId = ex.Id,
+                    Name = ex.Name,
+                    Sets = new List<FitnessTracker.Core.DTOs.SetInputDto>
+                    {
+                        new FitnessTracker.Core.DTOs.SetInputDto { TargetWeight = 0, TargetReps = 0 }
+                    }
+                }).ToList()
+            };
+
+            return activeSessionDto;
+        }
+
+
         public async Task<IEnumerable<RoutineDto>> GetAllAsync()
         {
             return await _context.WorkoutRoutines
