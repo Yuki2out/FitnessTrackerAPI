@@ -1,0 +1,866 @@
+:root {
+  --bg: #15171c;
+  --surface: #1e2128;
+  --surface-2: #262a33;
+  --border: #2e323c;
+  --text: #f2f1ed;
+  --text-muted: #9095a1;
+  --accent: #ff5c35;
+  --accent-dim: #4a2419;
+  --good: #5fe3a1;
+  --bad: #ff6b6b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-display {
+  font-family: "Bebas Neue", "Inter", sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.font-mono {
+  font-family: "IBM Plex Mono", monospace;
+}
+
+/* ─── Layout shell ─────────────────────────────────────────────────────── */
+
+.app-shell {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.topbar-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0.9rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.brand {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.6rem;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.brand-mark {
+  display: inline-block;
+  width: 0.6rem;
+  height: 1.4rem;
+  background: var(--accent);
+  transform: skewX(-12deg);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.nav-links a {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+  color: var(--text);
+}
+
+.nav-user {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.btn-logout {
+  font-size: 0.8rem;
+  color: var(--bad);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.btn-logout:hover {
+  border-color: var(--bad);
+}
+
+main {
+  flex: 1;
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 2rem 1.5rem 4rem;
+}
+
+/* ─── Headings ─────────────────────────────────────────────────────────── */
+
+.page-title {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 2.6rem;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.25rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.page-title .accent-bar {
+  display: inline-block;
+  width: 2.2rem;
+  height: 0.55em;
+  background: var(--accent);
+  transform: translateY(0.08em) skewX(-12deg);
+}
+
+.page-subtitle {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin: 0 0 2rem;
+}
+
+/* ─── Cards ────────────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+/* ─── Forms ────────────────────────────────────────────────────────────── */
+
+label {
+  display: block;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: border-color 0.15s;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.field {
+  margin-bottom: 1.1rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  background: var(--accent);
+  color: #1a1a1a;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.65rem 1.4rem;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.05s;
+}
+
+.btn:hover {
+  filter: brightness(1.08);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* ─── Alerts ───────────────────────────────────────────────────────────── */
+
+.alert {
+  border-radius: 6px;
+  padding: 0.7rem 1rem;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+  border: 1px solid transparent;
+}
+
+.alert-error {
+  background: rgba(255, 107, 107, 0.1);
+  border-color: rgba(255, 107, 107, 0.35);
+  color: var(--bad);
+}
+
+.alert-success {
+  background: rgba(95, 227, 161, 0.1);
+  border-color: rgba(95, 227, 161, 0.35);
+  color: var(--good);
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ─── Auth page ────────────────────────────────────────────────────────── */
+
+.auth-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.auth-header .brand {
+  justify-content: center;
+  font-size: 2.2rem;
+  margin-bottom: 0.4rem;
+}
+
+.auth-header p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.tab-row {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.5rem;
+}
+
+.tab-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 0.06em;
+  padding: 0.6rem 0;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+/* ─── Exercise grid ────────────────────────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.toolbar input {
+  flex: 1;
+  min-width: 180px;
+}
+
+.toolbar select {
+  width: auto;
+  min-width: 160px;
+}
+
+.exercise-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.exercise-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.exercise-card .ex-name {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.3rem;
+  letter-spacing: 0.04em;
+}
+
+.exercise-card .ex-desc {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.tag {
+  display: inline-flex;
+  align-self: flex-start;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+/* ─── Dashboard / log table ────────────────────────────────────────────── */
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.stat-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+}
+
+.stat-box .stat-value {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 1.8rem;
+  color: var(--accent);
+  line-height: 1.1;
+}
+
+.stat-box .stat-label {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 0.3rem;
+}
+
+.section-heading {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.3rem;
+  letter-spacing: 0.06em;
+  margin: 0 0 1rem;
+  color: var(--text);
+}
+
+.log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.log-entry {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+}
+
+.log-entry .log-exercise {
+  flex: 1;
+  font-weight: 600;
+}
+
+.log-entry .log-meta {
+  font-family: "IBM Plex Mono", monospace;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.log-entry .log-date {
+  font-family: "IBM Plex Mono", monospace;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.log-entry .icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.25rem;
+  transition: color 0.15s;
+}
+
+.log-entry .icon-btn:hover {
+  color: var(--bad);
+}
+
+.empty-state {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 2.5rem 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+
+.loading-state {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 2.5rem 1rem;
+}
+
+@media (max-width: 600px) {
+  .row-2 {
+    grid-template-columns: 1fr;
+  }
+  .page-title {
+    font-size: 2rem;
+  }
+}
+
+/* ─── Workout session page ─────────────────────────────────────────────── */
+
+.timer-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.timer-label {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 0.5rem;
+}
+
+.timer-display {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 3.2rem;
+  color: var(--accent);
+  line-height: 1.1;
+  font-weight: 500;
+}
+
+.timer-actions {
+  margin-top: 1.25rem;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.session-name-input {
+  max-width: 320px;
+  margin: 0 auto 1rem;
+  text-align: center;
+}
+
+.add-set-form {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 0.75rem;
+  align-items: end;
+  margin-bottom: 2rem;
+}
+
+.add-set-form .field {
+  margin-bottom: 0;
+}
+
+.exercise-group {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 0.85rem;
+}
+
+.exercise-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.exercise-group-name {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.25rem;
+  letter-spacing: 0.04em;
+}
+
+.set-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.set-row:first-of-type {
+  border-top: none;
+}
+
+.set-index {
+  font-family: "IBM Plex Mono", monospace;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  width: 1.6rem;
+}
+
+.set-value {
+  font-family: "IBM Plex Mono", monospace;
+  flex: 1;
+}
+
+.set-row .icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.2rem;
+  transition: color 0.15s;
+}
+
+.set-row .icon-btn:hover {
+  color: var(--bad);
+}
+
+.start-card {
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
+.start-card p {
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.start-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ─── Modal ────────────────────────────────────────────────────────────── */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 11, 14, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1rem;
+}
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.75rem;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+}
+
+.modal h3 {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.5rem;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.5rem;
+}
+
+.modal p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 0 0 1.5rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+@media (max-width: 600px) {
+  .add-set-form {
+    grid-template-columns: 1fr 1fr;
+  }
+  .add-set-form button {
+    grid-column: span 2;
+  }
+  .timer-display {
+    font-size: 2.4rem;
+  }
+}
+
+/* ─── Exercise Detail Dialog ───────────────────────────────────────────── */
+
+/* Make the grid items feel responsive and interactive */
+.exercise-card {
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.exercise-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+/* Style the native dialog container using your custom theme variables */
+dialog#exercise-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0;
+  max-width: 520px;
+  width: 100%;
+  color: var(--text);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Use native backdrop selector to mirror your modal-overlay opacity */
+dialog#exercise-modal::backdrop {
+  background: rgba(10, 11, 14, 0.85);
+  backdrop-filter: blur(3px);
+}
+
+.modal-inner {
+  padding: 1.75rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1.25rem;
+  background: none;
+  border: none;
+  font-size: 1.75rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  line-height: 1;
+  padding: 0.25rem;
+  transition: color 0.15s;
+}
+
+.modal-close-btn:hover {
+  color: var(--bad);
+}
+
+/* Visual Media formatting container */
+.modal-media-wrap {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.modal-media-wrap img {
+  max-width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+}
+
+.modal-section-title {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.4rem;
+  letter-spacing: 0.05em;
+  margin: 0;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.4rem;
+}
+
+.modal-instruction-text {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Adaptive layout matching your grid setups */
+.modal-log-inline-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.modal-log-inline-form .field {
+  margin-bottom: 0;
+}
+
+@media (max-width: 480px) {
+  .modal-log-inline-form {
+    grid-template-columns: 1fr 1fr;
+  }
+  .modal-log-inline-form .btn {
+    grid-column: span 2;
+  }
+}
+
+/* ─── Library Split Architecture layouts ───────────────────────────────── */
+
+.library-section {
+  margin-bottom: 2.5rem;
+}
+
+/* Row wrapper that switches to single-column blocks on lower dimensions */
+.library-split-row {
+  display: flex;
+  gap: 2rem;
+  margin-top: 1rem;
+}
+
+.split-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.library-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .library-split-row {
+    flex-direction: column;
+    gap: 2rem;
+  }
+}
+/* High Impact PR Theme Overlays */
+.Highlighted-pr-box {
+  background: linear-gradient(135deg, rgba(255, 191, 0, 0.04) 0%, rgba(0,0,0,0) 100%);
+  border: 1px solid rgba(255, 191, 0, 0.15) !important;
+}
+
+.Highlighted-pr-box .stat-value {
+  color: var(--accent) !important;
+  text-shadow: 0 0 15px rgba(255, 191, 0, 0.2);
+}
+
+/* Flex Distribution bar components */
+.exercise-card {
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.exercise-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent) !important;
+}
+@keyframes frameFlip {
+  0%, 49% {
+    opacity: 1;
+    z-index: 2;
+  }
+  50%, 100% {
+    opacity: 0;
+    z-index: 1;
+  }
+}

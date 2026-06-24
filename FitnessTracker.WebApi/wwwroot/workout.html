@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FitnessTracker — Workout</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <div id="nav-root"></div>
+
+    <main>
+      <h1 class="page-title"><span class="accent-bar"></span>Workout</h1>
+      <p class="page-subtitle" id="page-subtitle">Start a session to begin tracking sets and time.</p>
+
+      <div id="alert" class="alert hidden" role="alert"></div>
+
+      <div id="idle-view" class="hidden">
+        <div class="card start-card">
+          <div class="session-name-input field">
+            <label for="session-name">Workout name (optional)</label>
+            <input type="text" id="session-name" placeholder="e.g. Push Day" maxlength="100" />
+          </div>
+          <div class="start-actions">
+            <button class="btn" id="start-btn">Start workout</button>
+          </div>
+        </div>
+
+        <div id="last-workout-section" class="hidden" style="margin-top: 2rem;">
+          <h2 class="section-heading">Last workout</h2>
+          <div id="last-workout-card"></div>
+        </div>
+      </div>
+
+      <div id="active-view" class="hidden">
+        <div class="timer-card">
+          <div class="timer-label" id="session-name-display">Workout in progress</div>
+          <div class="timer-display" id="timer-display">00:00:00</div>
+          <div class="timer-actions">
+            <button class="btn btn-secondary" id="end-btn">End workout</button>
+          </div>
+        </div>
+
+        <div id="incoming-workout-container" style="margin-bottom: 2rem;"></div>
+
+        <form class="add-set-form" id="add-set-form">
+          <div class="field">
+            <label for="set-exercise">Exercise</label>
+            <select id="set-exercise" required>
+              <option value="">Loading exercises…</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="set-weight">Kg</label>
+            <input type="number" id="set-weight" required min="0.1" max="1000" step="0.1" placeholder="60" />
+          </div>
+          <div class="field">
+            <label for="set-reps">Reps</label>
+            <input type="number" id="set-reps" required min="1" max="200" step="1" placeholder="10" />
+          </div>
+          <button type="submit" class="btn">Add set</button>
+        </form>
+
+        <h2 class="section-heading">This session</h2>
+        <div id="empty-session" class="empty-state">No sets logged yet — add your first set above.</div>
+        <div id="exercise-groups"></div>
+      </div>
+
+      <div id="loading" class="loading-state">Loading…</div>
+    </main>
+  </div>
+
+  <div id="finish-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <h3>Save this workout?</h3>
+      <p id="finish-modal-summary">Your sets will be added to your progress log.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="discard-btn">Discard</button>
+        <button class="btn" id="save-btn">Save workout</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <script>
+    Auth.requireAuth();
+    renderNav("workout");
+
+    const alertEl = document.getElementById("alert");
+    const loadingEl = document.getElementById("loading");
+    const idleView = document.getElementById("idle-view");
+    const activeView = document.getElementById("active-view");
+    const pageSubtitle = document.getElementById("page-subtitle");
+
+    const startBtn = document.getElementById("start-btn");
+    const sessionNameInput = document.getElementById("session-name");
+    const lastWorkoutSection = document.getElementById("last-workout-section");
+    const lastWorkoutCard = document.getElementById("last-workout-card");
+
+    const timerDisplay = document.getElementById("timer-display");
+    const sessionNameDisplay = document.getElementById("session-name-display");
+    const endBtn = document.getElementById("end-btn");
+    const addSetForm = document.getElementById("add-set-form");
+    const exerciseSelect = document.getElementById("set-exercise");
+    const exerciseGroupsEl = document.getElementById("exercise-groups");
+    const emptySessionEl = document.getElementById("empty-session");
+    const incomingWorkoutContainer = document.getElementById("incoming-workout-container");
+
+    const finishModal = document.getElementById("finish-modal");
+    const finishSummary = document.getElementById("finish-modal-summary");
+    const saveBtn = document.getElementById("save-btn");
+    const discardBtn = document.getElementById("discard-btn");
+
+    let activeSession = null;
+    let timerInterval = null;
+    let exercisesById = {};
+
+    // ─── Timer ──────────────────────────────────────────────────────────
+    function formatElapsed(ms) {
+      const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor((totalSeconds % 3600) / 60);
+      const s = totalSeconds % 60;
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${pad(h)}:${pad(m)}:${pad(s)}`;
+    }
+
+    function startTimer(startTimeIso) {
+      stopTimer();
+      const start = new Date(startTimeIso).getTime();
+      const tick = () => {
+        timerDisplay.textContent = formatElapsed(Date.now() - start);
+      };
+      tick();
+      timerInterval = setInterval(tick, 1000);
+    }
+
+    function stopTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+
+    // ─── Exercise list (for the "add set" dropdown) ────────────────────
+    async function loadExercises() {
+      try {
+        const exercises = await apiFetch("/exercises");
+        exerciseSelect.innerHTML = "";
+        for (const ex of exercises) {
+          exercisesById[ex.id] = ex;
+          const opt = document.createElement("option");
+          opt.value = ex.id;
+          opt.textContent = `${ex.name} (${muscleGroupLabel(ex.muscleGroup)})`;
+          exerciseSelect.appendChild(opt);
+        }
+      } catch (err) {
+        showAlert(alertEl, "Could not load exercises: " + err.message);
+      }
+    }
+
+    // Helper utility method for missing label strings
+    function muscleGroupLabel(id) {
+      const labels = ["Chest", "Legs", "Back", "Shoulders", "Arms", "Core"];
+      return labels[id] || "Exercise";
+    }
+
+    // ─── Rendering ──────────────────────────────────────────────────────
+    function renderActiveSession() {
+      idleView.classList.add("hidden");
+      activeView.classList.remove("hidden");
+      pageSubtitle.textContent = "Session in progress — log your sets as you go.";
+
+      sessionNameDisplay.textContent = activeSession.name
+        ? activeSession.name
+        : "Workout in progress";
+
+      startTimer(activeSession.startTime);
+      renderSets();
+    }
+
+    function renderSets() {
+      const sets = activeSession.sets || [];
+      exerciseGroupsEl.innerHTML = "";
+
+      if (sets.length === 0) {
+        emptySessionEl.classList.remove("hidden");
+        return;
+      }
+      emptySessionEl.classList.add("hidden");
+
+      const order = [];
+      const groups = new Map();
+      for (const set of sets) {
+        if (!groups.has(set.exerciseId)) {
+          groups.set(set.exerciseId, { name: set.exerciseName, sets: [] });
+          order.push(set.exerciseId);
+        }
+        groups.get(set.exerciseId).sets.push(set);
+      }
+
+      for (const exId of order) {
+        const group = groups.get(exId);
+        const groupEl = document.createElement("div");
+        groupEl.className = "exercise-group";
+
+        const header = document.createElement("div");
+        header.className = "exercise-group-header";
+        header.innerHTML = `<span class="exercise-group-name">${group.name}</span>`;
+        groupEl.appendChild(header);
+
+        group.sets.forEach((set, idx) => {
+          const row = document.createElement("div");
+          row.className = "set-row";
+          row.innerHTML = `
+            <span class="set-index">#${idx + 1}</span>
+            <span class="set-value">${set.weightUsed} kg × ${set.repsCompleted} reps</span>
+            <button class="icon-btn" title="Remove set" data-set-id="${set.id}">✕</button>
+          `;
+          row.querySelector(".icon-btn").addEventListener("click", () => removeSet(set.id));
+          groupEl.appendChild(row);
+        });
+
+        exerciseGroupsEl.appendChild(groupEl);
+      }
+    }
+
+    async function renderIdleView() {
+      stopTimer();
+      activeView.classList.add("hidden");
+      idleView.classList.remove("hidden");
+      pageSubtitle.textContent = "Start a session to begin tracking sets and time.";
+      sessionNameInput.value = "";
+
+      try {
+        const history = await apiFetch("/workoutsessions/my");
+        if (history && history.length > 0) {
+          renderLastWorkout(history[0]);
+          lastWorkoutSection.classList.remove("hidden");
+        } else {
+          lastWorkoutSection.classList.add("hidden");
+        }
+      } catch {
+        lastWorkoutSection.classList.add("hidden");
+      }
+    }
+
+    function renderLastWorkout(session) {
+      const order = [];
+      const groups = new Map();
+      for (const set of session.sets) {
+        if (!groups.has(set.exerciseId)) {
+          groups.set(set.exerciseId, { name: set.exerciseName, sets: [] });
+          order.push(set.exerciseId);
+        }
+        groups.get(set.exerciseId).sets.push(set);
+      }
+
+      let html = `<div class="card">`;
+      html += `<div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.75rem;">
+        ${session.name ? session.name + " — " : ""}${formatDate(session.startTime)}
+      </div>`;
+
+      for (const exId of order) {
+        const group = groups.get(exId);
+        const setsText = group.sets
+          .map((s) => `${s.weightUsed}kg × ${s.repsCompleted}`)
+          .join(", ");
+        html += `<div style="margin-bottom: 0.4rem;"><strong>${group.name}:</strong> <span class="font-mono" style="color: var(--text-muted);">${setsText}</span></div>`;
+      }
+
+      html += `</div>`;
+      lastWorkoutCard.innerHTML = html;
+    }
+
+    // ─── NEW: TARGET INPUT BLOCK RENDER ENGINE FOR INCOMING DTO PAYLOADS ───
+    function renderIncomingWorkoutTemplate(sessionSetupData) {
+      incomingWorkoutContainer.innerHTML = `
+        <h2 class="section-heading" style="margin-bottom: 1rem;">Template Setup Targets</h2>
+      `;
+
+      sessionSetupData.exercises.forEach(ex => {
+        const block = document.createElement("div");
+        block.className = "exercise-group";
+        block.style.borderLeft = "3px solid var(--accent-dim)";
+        
+        let targetRowsHtml = "";
+        ex.sets.forEach((set, idx) => {
+          targetRowsHtml += `
+            <div class="set-row" style="background: rgba(255,255,255,0.01); border-radius: 4px; padding: 0.5rem 0.75rem;">
+              <span class="set-index" style="font-weight:600; color: var(--accent);">Set ${idx + 1}</span>
+              <span class="set-value" style="color: var(--text-muted);">
+                Target Hint: <strong style="color: var(--text);">${set.targetWeight} kg</strong> × <strong style="color: var(--text);">${set.targetReps} reps</strong>
+              </span>
+              <button class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" 
+                type="button" onclick="quickFillSetForm(${ex.exerciseId}, ${set.targetWeight}, ${set.targetReps})">
+                Use Stats
+              </button>
+            </div>
+          `;
+        });
+
+        block.innerHTML = `
+          <div class="exercise-group-header">
+            <span class="exercise-group-name">${ex.name}</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:0.4rem; margin-top:0.5rem;">
+            ${targetRowsHtml}
+          </div>
+        `;
+        incomingWorkoutContainer.appendChild(block);
+      });
+    }
+
+    // Interactive injection helper to load targets right into the active tracking form
+    window.quickFillSetForm = function(exerciseId, weight, reps) {
+      exerciseSelect.value = exerciseId;
+      document.getElementById("set-weight").value = weight > 0 ? weight : "";
+      document.getElementById("set-reps").value = reps > 0 ? reps : "";
+      document.getElementById("set-weight").focus();
+    };
+
+    // ─── Actions ────────────────────────────────────────────────────────
+    startBtn.addEventListener("click", async () => {
+      hideAlert(alertEl);
+      startBtn.disabled = true;
+      startBtn.textContent = "Starting…";
+
+      try {
+        const name = sessionNameInput.value.trim();
+        activeSession = await apiFetch("/workoutsessions/start", {
+          method: "POST",
+          body: { name: name || null }, // <--- It expects an object with a "name" property!
+        });
+        renderActiveSession();
+      } catch (err) {
+        showAlert(alertEl, err.message);
+      } finally {
+        startBtn.disabled = false;
+        startBtn.textContent = "Start workout";
+      }
+    });
+
+    addSetForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideAlert(alertEl);
+
+      const submitBtn = addSetForm.querySelector("button[type=submit]");
+      submitBtn.disabled = true;
+
+      try {
+        const newSet = await apiFetch(`/workoutsessions/${activeSession.id}/sets`, {
+          method: "POST",
+          body: {
+            exerciseId: parseInt(exerciseSelect.value, 10),
+            weightUsed: parseFloat(document.getElementById("set-weight").value),
+            repsCompleted: parseInt(document.getElementById("set-reps").value, 10),
+          },
+        });
+        activeSession.sets.push(newSet);
+        renderSets();
+        document.getElementById("set-weight").value = "";
+        document.getElementById("set-reps").value = "";
+      } catch (err) {
+        showAlert(alertEl, err.message);
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    async function removeSet(setId) {
+      try {
+        await apiFetch(`/workoutsessions/${activeSession.id}/sets/${setId}`, {
+          method: "DELETE",
+        });
+        activeSession.sets = activeSession.sets.filter((s) => s.id !== setId);
+        renderSets();
+      } catch (err) {
+        showAlert(alertEl, err.message);
+      }
+    }
+
+    endBtn.addEventListener("click", () => {
+      const setCount = activeSession.sets.length;
+      finishSummary.textContent =
+        setCount === 0
+          ? "You haven't logged any sets. Discard this workout, or save it anyway."
+          : `You logged ${setCount} set${setCount === 1 ? "" : "s"} in ${timerDisplay.textContent}. Save it to your progress log?`;
+      finishModal.classList.remove("hidden");
+    });
+
+    saveBtn.addEventListener("click", () => finishWorkout(true));
+    discardBtn.addEventListener("click", () => finishWorkout(false));
+
+    async function finishWorkout(save) {
+      saveBtn.disabled = true;
+      discardBtn.disabled = true;
+      try {
+        await apiFetch(`/workoutsessions/${activeSession.id}/finish?save=${save}`, {
+          method: "POST",
+        });
+        finishModal.classList.add("hidden");
+        activeSession = null;
+        incomingWorkoutContainer.innerHTML = ""; // Clear current loaded guidance setup templates
+        await renderIdleView();
+      } catch (err) {
+        showAlert(alertEl, err.message);
+      } finally {
+        saveBtn.disabled = false;
+        discardBtn.disabled = false;
+      }
+    }
+
+    // ─── Init ───────────────────────────────────────────────────────────
+    async function init() {
+      await loadExercises();
+
+      // Check if an active live tracking state is already running in the DB
+      try {
+        const active = await apiFetch("/workoutsessions/active");
+        if (active) {
+          activeSession = active;
+          renderActiveSession();
+          loadingEl.classList.add("hidden");
+          return;
+        }
+      } catch (err) {
+        console.warn("Active session verification bypassed:", err.message);
+      }
+
+      // NEW: Intercept URL query variables passed down from the My Library layout page
+      const urlParams = new URLSearchParams(window.location.search);
+      const templateId = urlParams.get('templateId');
+      const cloneFromId = urlParams.get('cloneFromId');
+
+      if (templateId || cloneFromId) {
+        // FIX: Change '/workoutroutines/setup-active?' to match your real backend controller!
+        let endpoint = '/workoutsessions/setup-active?'; 
+        if (templateId) endpoint += `templateId=${templateId}`;
+        if (cloneFromId) endpoint += `cloneFromId=${cloneFromId}`;
+
+        try {
+          const sessionSetupData = await apiFetch(endpoint);
+          
+          activeSession = await apiFetch("/workoutsessions/start", {
+            method: "POST",
+            body: { name: sessionSetupData.workoutName || "Cloned Session" },
+          });
+
+          renderActiveSession();
+          renderIncomingWorkoutTemplate(sessionSetupData);
+
+        } catch (err) {
+          showAlert(alertEl, "Could not initialize configured library entry: " + err.message);
+          await renderIdleView();
+        } finally {
+          loadingEl.classList.add("hidden");
+        }
+      } else {
+        // Fallback to normal default idle state selection layout flow
+        await renderIdleView();
+        loadingEl.classList.add("hidden");
+      }
+    }
+
+    // Custom fallback methods for mock safety matching your setup utilities
+    function formatDate(iso) { return new Date(iso).toLocaleDateString(); }
+    function showAlert(el, msg) { el.textContent = msg; el.classList.remove("hidden"); el.classList.add("alert-error"); }
+    function hideAlert(el) { el.classList.add("hidden"); }
+
+    init();
+  </script>
+</body>
+</html>

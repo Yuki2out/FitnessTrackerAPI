@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FitnessTracker — Library</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <div id="nav-root"></div>
+
+    <main>
+      <h1 class="page-title"><span class="accent-bar"></span>My Library</h1>
+      <p class="page-subtitle">Manage your personal templates, quick-access exercises, and history.</p>
+
+      <div id="alert" class="alert hidden" role="alert"></div>
+
+      <section class="library-section">
+        <h2 class="section-heading">Saved Workout Templates</h2>
+        <div id="saved-workouts-grid" class="library-grid-3">
+          <div class="loading-state">Loading templates…</div>
+        </div>
+      </section>
+
+      <div class="library-split-row">
+        
+        <section class="split-col">
+          <h2 class="section-heading">Favorite Exercises</h2>
+          <div id="fav-exercises-list" class="log-list">
+            <div class="loading-state">Loading favorites…</div>
+          </div>
+        </section>
+
+        <section class="split-col">
+          <h2 class="section-heading">Past Workouts History</h2>
+          <div id="past-workouts-list" class="log-list">
+            <div class="loading-state">Loading history…</div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="api.js"></script>
+  <script>
+    Auth.requireAuth();
+    renderNav("library");
+
+    const alertEl = document.getElementById("alert");
+    const savedGrid = document.getElementById("saved-workouts-grid");
+    const favList = document.getElementById("fav-exercises-list");
+    const pastList = document.getElementById("past-workouts-list");
+
+    async function initLibrary() {
+      await loadTemplates();
+      await loadFavorites();
+      await loadHistory();
+    }
+
+    async function loadTemplates() {
+      try {
+        const templates = await apiFetch("/workout-templates");
+        renderTemplates(templates);
+      } catch (err) {
+        console.warn("Could not load templates:", err.message);
+        savedGrid.innerHTML = '<div class="empty-state" style="color: var(--text-muted);">Templates endpoint unavailable.</div>';
+      }
+    }
+
+    async function loadFavorites() {
+      try {
+        const favorites = await apiFetch("/exercises/favorites");
+        renderFavorites(favorites);
+      } catch (err) {
+        console.warn("Could not load favorites:", err.message);
+        favList.innerHTML = '<div class="empty-state" style="color: var(--text-muted);">Favorites endpoint unavailable.</div>';
+      }
+    }
+
+    async function loadHistory() {
+      try {
+        const history = await apiFetch("/workoutsessions/my");
+        renderHistory(history);
+      } catch (err) {
+        console.warn("Could not load history:", err.message);
+        pastList.innerHTML = '<div class="empty-state" style="color: var(--text-muted);">History endpoint unavailable.</div>';
+      }
+    }
+
+    function renderTemplates(templates) {
+      savedGrid.innerHTML = templates.length === 0 ? '<div class="empty-state">No saved templates yet.</div>' : '';
+      
+      templates.forEach(tpl => {
+        if (!tpl) return;
+
+        const div = document.createElement("div");
+        div.className = "card exercise-card"; 
+        // Position relative allows us to pin the X button perfectly to the top right corner
+        div.style.position = "relative"; 
+        
+        const clickHandler = tpl.pastWorkoutSessionId 
+          ? `clonePastWorkoutAsActive(${tpl.pastWorkoutSessionId})` 
+          : `startWorkoutTemplate(${tpl.id})`;
+
+        div.innerHTML = `
+          <button onclick="deleteTemplate(event, ${tpl.id})" style="
+            position: absolute;
+            top: 0.5rem;
+            right: 0.75rem;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: color 0.2s ease;
+            padding: 0.25rem;
+            line-height: 1;
+          " onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" title="Delete template">
+            ✕
+          </button>
+
+          <div class="ex-name" style="padding-right: 1.5rem;">${tpl.name || 'Unnamed Template'}</div>
+          <div class="ex-desc">${tpl.exerciseCount || 0} exercises configured</div>
+          <button class="btn btn-block" onclick="${clickHandler}">
+            Start Workout
+          </button>
+        `;
+        savedGrid.appendChild(div);
+      });
+    }
+
+    // DELETE API Call Routine
+    async function deleteTemplate(event, templateId) {
+      // Prevent clicking the X button from triggering the parent card click or page routing redirect
+      event.stopPropagation();
+      
+      if (!confirm("Are you sure you want to remove this template?")) return;
+
+      try {
+        await apiFetch(`/workout-templates/${templateId}`, {
+          method: "DELETE"
+        });
+        
+        showAlert(alertEl, "Template removed successfully.", "success");
+        await loadTemplates(); // Instantly reloads the grid without refreshing the page!
+      } catch (err) {
+        showAlert(alertEl, "Failed to delete template: " + err.message);
+      }
+    }
+
+    function renderFavorites(favs) {
+      favList.innerHTML = favs.length === 0 ? '<div class="empty-state">No favorites saved.</div>' : '';
+      
+      favs.forEach(ex => {
+        const div = document.createElement("div");
+        div.className = "log-entry";
+        div.innerHTML = `
+          <div class="log-exercise">${ex.name}</div>
+          <span class="tag">Quick Look</span>
+        `;
+        div.style.cursor = "pointer";
+        div.addEventListener("click", () => window.location.href = `exercises.html?id=${ex.id}`);
+        favList.appendChild(div);
+      });
+    }
+
+    function renderHistory(history) {
+      pastList.innerHTML = history.length === 0 ? '<div class="empty-state">No previous logs found.</div>' : '';
+      
+      history.forEach(log => {
+        const dateString = new Date(log.endTime || log.startTime).toLocaleDateString();
+        const workoutName = log.name || "Custom Session";
+        const div = document.createElement("div");
+        div.className = "log-entry";
+        div.style = "display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;";
+        div.innerHTML = `
+          <div style="flex: 1;">
+            <div class="log-exercise">${workoutName}</div>
+            <div class="log-date" style="font-size: 0.8rem; color: var(--text-muted);">${dateString}</div>
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <button class="icon-btn" title="Save as template" onclick="convertHistoryToTemplate(${log.id}, '${workoutName}')" style="background: transparent; border: none; cursor: pointer; font-size: 1.1rem; color: #ffbc00;">★</button>
+            <button class="icon-btn" title="Repeat session payload" onclick="clonePastWorkoutAsActive(${log.id})" style="background: transparent; border: none; cursor: pointer; font-size: 1rem; color: var(--accent);">⚡</button>
+          </div>
+        `;
+        pastList.appendChild(div);
+      });
+    }
+
+    // Convert Past History Log into a Permanent Workout Template
+    async function convertHistoryToTemplate(historyId, defaultName) {
+      const templateName = prompt("Enter a name for this saved template:", `Favorite - ${defaultName}`);
+      if (!templateName || !templateName.trim()) return;
+
+      try {
+        // Sends a POST request to create a template out of your workout history session data
+        await apiFetch("/workout-templates/from-history", {
+          method: "POST",
+          body: {
+            workoutSessionId: historyId,
+            name: templateName.trim()
+          }
+        });
+        
+        // Alert user and reload templates immediately on screen!
+        showAlert(alertEl, `"${templateName}" successfully saved to your templates!`, "success");
+        await loadTemplates();
+      } catch (err) {
+        showAlert(alertEl, "Failed to save template: " + err.message);
+      }
+    }
+
+    function startWorkoutTemplate(templateId) {
+      window.location.href = `workout.html?templateId=${templateId}`;
+    }
+
+    function clonePastWorkoutAsActive(pastWorkoutId) {
+      window.location.href = `workout.html?cloneFromId=${pastWorkoutId}`;
+    }
+
+    initLibrary();
+  </script>
+</body>
+</html>

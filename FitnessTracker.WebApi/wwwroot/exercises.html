@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FitnessTracker — Exercises</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Animation CSS keyframes for flipbook effect */
+    @keyframes frameFlip {
+      0%, 49% { opacity: 1; z-index: 2; }
+      50%, 100% { opacity: 0; z-index: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div id="nav-root"></div>
+
+    <main>
+      <h1 class="page-title"><span class="accent-bar"></span>Exercises</h1>
+      <p class="page-subtitle">Browse the exercise library. Click an exercise to view instructions.</p>
+
+      <div id="alert" class="alert hidden" role="alert"></div>
+
+      <div class="toolbar">
+        <input type="search" id="search-input" placeholder="Search by name or description…" />
+        <select id="muscle-filter">
+          <option value="">All muscle groups</option>
+          <option value="0">Chest</option>
+          <option value="1">Legs</option>
+          <option value="2">Back</option>
+          <option value="3">Shoulders</option>
+          <option value="4">Arms</option>
+          <option value="5">Core</option>
+        </select>
+      </div>
+
+      <div id="empty" class="empty-state hidden">No exercises match your search.</div>
+      <div id="exercise-grid" class="exercise-grid"></div>
+    </main>
+  </div>
+
+  <dialog id="exercise-modal">
+    <div class="modal-inner">
+      <button id="close-modal-btn" class="modal-close-btn" type="button">&times;</button>
+      
+      <div id="modal-tag" class="tag"></div>
+      
+      <div class="modal-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; gap: 1rem;">
+        <h2 id="modal-title" class="page-title" style="margin: 0;"></h2>
+        <button id="fav-btn" class="fav-star-btn" type="button" title="Toggle Favorite" style="background: none; border: none; font-size: 1.75rem; cursor: pointer; color: var(--text-muted); transition: transform 0.1s ease;">
+          <span class="star-icon">☆</span>
+        </button>
+      </div>
+      
+      <div class="modal-media-wrap" style="margin-top: 1rem;">
+        </div>
+
+      <h3 class="modal-section-title">Instructions</h3>
+      <p id="modal-desc" class="modal-instruction-text"></p>
+    </div>
+  </dialog>
+
+  <script src="api.js"></script>
+  <script>
+    Auth.requireAuth();
+    renderNav("exercises");
+
+    const alertEl = document.getElementById("alert");
+    const emptyEl = document.getElementById("empty");
+    const gridEl = document.getElementById("exercise-grid");
+    const searchInput = document.getElementById("search-input");
+    const muscleFilter = document.getElementById("muscle-filter");
+
+    // Modal DOM Nodes
+    const modalEl = document.getElementById("exercise-modal");
+    const closeModalBtn = document.getElementById("close-modal-btn");
+    const modalTag = document.getElementById("modal-tag");
+    const modalTitle = document.getElementById("modal-title");
+    const modalDesc = document.getElementById("modal-desc");
+
+    const favBtn = document.getElementById("fav-btn");
+    let isCurrentlyFavorited = false;
+    let currentOpenExerciseId = null;
+
+    let allExercises = [];
+    const API_BASE_URL = "http://localhost:5180";
+
+    function muscleGroupLabel(id) {
+      const labels = ["Chest", "Legs", "Back", "Shoulders", "Arms", "Core"];
+      return labels[id] || "Exercise";
+    }
+
+    async function checkFavoriteStatus(id) {
+      try {
+        favBtn.disabled = true;
+        isCurrentlyFavorited = await apiFetch(`/exercises/${id}/is-favorited`);
+        updateFavButtonUI();
+      } catch (err) {
+        console.log('Could not fetch favorite metadata status', err);
+      } finally {
+        favBtn.disabled = false;
+      }
+    }
+
+    function updateFavButtonUI(){
+      const star = favBtn.querySelector(".star-icon");
+      if (isCurrentlyFavorited){
+        favBtn.classList.add("favorited-active");
+        star.textContent = '★'; 
+        favBtn.style.color = "var(--accent, #00cfc8)";
+      } else {
+        favBtn.classList.remove("favorited-active");
+        star.textContent = "☆";
+        favBtn.style.color = "";
+      }
+    }
+
+    favBtn.addEventListener('click', async() => {
+      if (!currentOpenExerciseId) return;
+      favBtn.disabled = true;
+      const actionEndpoint = isCurrentlyFavorited ? 'unfavorite' : 'favorite';
+      try {
+        await apiFetch(`/exercises/${currentOpenExerciseId}/${actionEndpoint}`, {method: 'POST'});
+        isCurrentlyFavorited = !isCurrentlyFavorited;
+        updateFavButtonUI();
+      } catch (err){
+        alert('Could not update favorite state: ' + err.message);
+      } finally {
+        favBtn.disabled = false;
+      }
+    });
+
+    function render() {
+      const query = searchInput.value.trim().toLowerCase();
+      const muscle = muscleFilter.value;
+
+      const filtered = allExercises.filter((ex) => {
+        const name = (ex.name || ex.Name || "").toLowerCase();
+        const description = (ex.description || ex.Description || "").toLowerCase();
+        const mGroup = ex.muscleGroup !== undefined ? ex.muscleGroup : ex.MuscleGroup;
+
+        const matchesQuery = !query || name.includes(query) || description.includes(query);
+        const matchesMuscle = muscle === "" || String(mGroup) === muscle;
+
+        return matchesQuery && matchesMuscle;
+      });
+
+      gridEl.innerHTML = "";
+      if (filtered.length === 0) {
+        emptyEl.classList.remove("hidden");
+        return;
+      }
+      emptyEl.classList.add("hidden");
+
+      for (const ex of filtered) {
+        const id = ex.id || ex.Id;
+        const name = ex.name || ex.Name || "Unnamed Exercise";
+        const description = ex.description || ex.Description || "No instructions provided.";
+        const mGroup = ex.muscleGroup !== undefined ? ex.muscleGroup : ex.MuscleGroup;
+        const folderUrl = ex.gifUrl || ex.GifUrl;
+
+        const absoluteImageUrl = folderUrl 
+          ? (folderUrl.startsWith("http") ? `${folderUrl}/images/0.jpg` : `${API_BASE_URL}${folderUrl}/images/0.jpg`)
+          : null;
+
+        const cardMediaHtml = absoluteImageUrl
+          ? `
+            <div class="exercise-card-thumb" style="width: 100%; height: 140px; background: #fff; border-bottom: 1px solid rgba(255,255,255,0.05); overflow: hidden;">
+              <img src="${absoluteImageUrl}" style="width: 100%; height: 100%; object-fit: cover;" onerror="console.error('Failed to load card image:', this.src); this.src='https://placehold.co/150x140?text=Exercise'"/>
+            </div>
+          `
+          : "";
+
+        const card = document.createElement("div");
+        card.className = "exercise-card";
+        card.style = "overflow: hidden; display: flex; flex-direction: column; cursor: pointer;";
+        card.innerHTML = `
+          ${cardMediaHtml}
+          <div style="padding: 1rem; display: flex; flex-direction: column; flex-grow: 1; gap: 0.5rem;">
+            <span class="tag" style="width: max-content;">${muscleGroupLabel(mGroup)}</span>
+            <div class="ex-name" style="font-weight: 600; color: #fff;">${name}</div>
+            <div class="ex-desc" style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${description}</div>
+            <div class="font-mono" style="color: var(--text-muted); font-size: 0.7rem; margin-top: auto; padding-top: 0.5rem;">ID #${id}</div>
+          </div>
+        `;
+        
+        card.addEventListener("click", () => openExerciseDetail(ex));
+        gridEl.appendChild(card);
+      }
+    }
+
+    function openExerciseDetail(exercise) {
+      const id = exercise.id || exercise.Id;
+      const name = exercise.name || exercise.Name || "Unnamed Exercise";
+      const description = exercise.description || exercise.Description || "No instructions provided.";
+      const mGroup = exercise.muscleGroup !== undefined ? exercise.muscleGroup : exercise.MuscleGroup;
+      const folderUrl = exercise.gifUrl || exercise.GifUrl;
+
+      currentOpenExerciseId = id;
+      modalTag.textContent = muscleGroupLabel(mGroup);
+      modalTitle.textContent = name;
+      modalDesc.textContent = description;
+      
+      const mediaWrap = document.querySelector(".modal-media-wrap");
+      if (mediaWrap) {
+        if (folderUrl) {
+          const baseUrl = folderUrl.startsWith("http") ? folderUrl : `${API_BASE_URL}${folderUrl}`;
+          
+          mediaWrap.innerHTML = `
+            <div class="flipbook-container" style="position: relative; width: 100%; max-height: 350px; height: 280px; background: #fff; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+              <img src="${baseUrl}/images/0.jpg" style="position: absolute; max-width: 100%; max-height: 100%; object-fit: contain; animation: frameFlip 1.0s infinite steps(1, end);" onerror="console.error('Modal Frame 0 failed to load:', this.src);"/>
+              <img src="${baseUrl}/images/1.jpg" style="position: absolute; max-width: 100%; max-height: 100%; object-fit: contain; animation: frameFlip 1.0s infinite steps(1, end) reverse;" onerror="this.style.display='none'"/>
+            </div>
+          `;
+        } else {
+          mediaWrap.innerHTML = `<img src="https://placehold.co/600x400?text=No+Animation" alt="Demonstration" />`;
+        }
+      }
+      
+      checkFavoriteStatus(id);
+      modalEl.showModal(); 
+    }
+
+    closeModalBtn.addEventListener("click", () => {
+      currentOpenExerciseId = null;
+      modalEl.close();
+    });
+    
+    modalEl.addEventListener("click", (e) => { if (e.target === modalEl) modalEl.close(); });
+
+    async function load() {
+      try {
+        allExercises = await apiFetch(`/exercises`);
+        render();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetId = urlParams.get('id');
+        
+        if (targetId) {
+          const targetExercise = allExercises.find(ex => {
+            const id = ex.id || ex.Id;
+            return id === parseInt(targetId);
+          });
+          if (targetExercise) {
+            openExerciseDetail(targetExercise);
+          }
+        }
+      } catch (err) {
+        if (typeof showAlert === "function") {
+          showAlert(alertEl, err.message);
+        } else {
+          console.error(err);
+        }
+      }
+    }
+
+    searchInput.addEventListener("input", render);
+    muscleFilter.addEventListener("change", render);
+   
+    load();
+  </script>
+</body>
+</html>
